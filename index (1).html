@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimento de Memoria Visual</title>
+<style>
+  :root{
+    --bg:#f7f7f2;
+    --surface:#ffffff;
+    --ink:#20221c;
+    --muted:#686b5f;
+    --accent:#3c4d6b;
+    --accent-ink:#ffffff;
+    --rule:#d9dbcd;
+    --danger:#a5372a;
+    --rojo:#c0392b;
+    --azul:#1f5fbf;
+    --verde:#1f7a4d;
+    --naranja:#c9701f;
+    --violeta:#7b4b94;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3{
+    font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    font-weight:600;
+    margin:0 0 0.4em 0;
+    letter-spacing:0.2px;
+  }
+  .screen{
+    display:none;
+    min-height:100vh;
+    align-items:center;
+    justify-content:center;
+    padding:32px 20px;
+  }
+  .screen.active{display:flex;}
+  .card{
+    background:var(--surface);
+    border:1px solid var(--rule);
+    border-radius:6px;
+    padding:40px;
+    max-width:560px;
+    width:100%;
+    box-shadow:0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card.wide{max-width:1080px;}
+  p{line-height:1.6;color:var(--ink);}
+  .muted{color:var(--muted);}
+  label{display:block;font-size:14px;color:var(--muted);margin-bottom:6px;}
+  input[type=text], input[type=password], textarea{
+    width:100%;
+    font-size:16px;
+    font-family:inherit;
+    padding:11px 12px;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    background:#fdfdfb;
+    color:var(--ink);
+  }
+  textarea{min-height:160px;resize:vertical;line-height:1.5;}
+  input:focus, textarea:focus, button:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+  }
+  .field{margin-bottom:20px;}
+  button{
+    font-family:inherit;
+    font-size:15px;
+    padding:11px 22px;
+    border-radius:4px;
+    border:1px solid var(--accent);
+    background:var(--accent);
+    color:var(--accent-ink);
+    cursor:pointer;
+  }
+  button:hover{opacity:0.92;}
+  button.secondary{
+    background:transparent;
+    color:var(--accent);
+  }
+  button.link{
+    background:none;
+    border:none;
+    color:var(--muted);
+    text-decoration:underline;
+    padding:4px 0;
+    font-size:13px;
+  }
+  button.danger{background:var(--danger);border-color:var(--danger);}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .row.between{justify-content:space-between;align-items:center;}
+  .top-corner{
+    position:fixed;top:16px;right:18px;z-index:5;
+  }
+  /* Exposicion */
+  .exposure-wrap{
+    display:flex;flex-direction:column;align-items:center;gap:28px;
+    width:100%;max-width:900px;
+  }
+  .timer-bar-track{
+    width:100%;max-width:420px;height:6px;background:var(--rule);border-radius:3px;overflow:hidden;
+  }
+  .timer-bar-fill{
+    height:100%;background:var(--accent);width:100%;transition:width 1s linear;
+  }
+  .timer-label{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .word-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(120px,1fr));
+    gap:20px 32px;
+    width:100%;
+  }
+  .word-grid .word{
+    text-align:center;
+    font-size:26px;
+    font-weight:600;
+    font-family:Georgia,"Iowan Old Style",serif;
+    padding:6px 4px;
+  }
+  .col-rojo{color:var(--rojo);}
+  .col-azul{color:var(--azul);}
+  .col-verde{color:var(--verde);}
+  .col-naranja{color:var(--naranja);}
+  .col-violeta{color:var(--violeta);}
+  /* Tabla */
+  table{border-collapse:collapse;width:100%;font-size:13.5px;}
+  th,td{border-bottom:1px solid var(--rule);padding:8px 10px;text-align:left;white-space:normal;}
+  th{white-space:nowrap;}
+  td:not(:nth-child(7)):not(:nth-child(8)){white-space:nowrap;}
+  td:nth-child(7), td:nth-child(8){max-width:220px;}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:none;}
+  .table-scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:4px;}
+  .stats-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin:18px 0 26px 0;
+  }
+  .stat-box{border:1px solid var(--rule);border-radius:4px;padding:14px 16px;background:#fdfdfb;}
+  .stat-box .n{font-size:22px;font-weight:600;font-family:Georgia,serif;}
+  .stat-box .l{font-size:12px;color:var(--muted);margin-top:2px;}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:24px 0;}
+  @media (max-width:760px){.charts{grid-template-columns:1fr;}}
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(20,20,15,0.45);
+    display:none;align-items:center;justify-content:center;z-index:50;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal-box{background:var(--surface);border-radius:6px;padding:28px;max-width:380px;width:90%;}
+  .section-title{font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:28px 0 10px 0;}
+  .empty-note{color:var(--muted);font-size:14px;padding:20px 0;}
+  footer.panel-actions{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;}
+  .word-count-hint{font-size:12px;color:var(--muted);margin-top:-10px;margin-bottom:18px;}
+</style>
+</head>
+<body>
+
+<!-- ============ PANTALLA INICIAL ============ -->
+<div id="screen-start" class="screen active">
+  <div class="card">
+    <h1>Prueba de atención y memoria</h1>
+    <p class="muted">Vas a observar brevemente un conjunto de palabras y luego se te pedirá que recuerdes tantas como puedas. Seguí las instrucciones en pantalla en cada paso.</p>
+    <div class="field" style="margin-top:24px;">
+      <label for="participant-id">Nombre o ID del participante</label>
+      <input type="text" id="participant-id" placeholder="Ej: Participante 01">
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <button id="btn-start">Comenzar experimento</button>
+      <button class="link" id="btn-open-panel-link">Panel del investigador</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EXPOSICION ============ -->
+<div id="screen-exposure" class="screen">
+  <div class="exposure-wrap">
+    <div style="width:100%;max-width:420px;text-align:center;">
+      <div class="timer-bar-track"><div class="timer-bar-fill" id="timer-fill"></div></div>
+      <div class="timer-label" id="timer-label" style="margin-top:8px;">15 s</div>
+    </div>
+    <div class="word-grid" id="word-grid"></div>
+  </div>
+</div>
+
+<!-- ============ RECUERDO ============ -->
+<div id="screen-recall" class="screen">
+  <div class="card">
+    <h2>Recordá las palabras</h2>
+    <p>Escribí todas las palabras que recuerdes del conjunto que acabas de ver. Podés separarlas como te resulte más cómodo: con comas, con espacios, con guiones o en renglones distintos. No hace falta usar comas si no querés.</p>
+    <div class="field">
+      <textarea id="recall-input" placeholder="palabra1, palabra2, palabra3..."></textarea>
+    </div>
+    <button id="btn-submit-recall">Continuar</button>
+  </div>
+</div>
+
+<!-- ============ TRANSICION ============ -->
+<div id="screen-transition" class="screen">
+  <div class="card" style="text-align:center;">
+    <h2>Primer bloque completado</h2>
+    <p class="muted">Cuando estés listo, comenzá el segundo bloque. Va a funcionar de la misma manera que el anterior.</p>
+    <button id="btn-start-block2">Comenzar segundo bloque</button>
+  </div>
+</div>
+
+<!-- ============ FINAL ============ -->
+<div id="screen-final" class="screen">
+  <div class="card" style="text-align:center;">
+    <h2>¡Gracias por participar!</h2>
+    <p class="muted">Tus respuestas quedaron guardadas.</p>
+    <div id="final-score" style="margin:18px 0;"></div>
+    <button class="link" id="btn-restart" style="margin-top:6px;">Volver al inicio</button>
+  </div>
+</div>
+
+<!-- ============ MODAL PASSWORD ============ -->
+<div id="modal-password" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Panel del investigador</h3>
+    <p class="muted" style="font-size:14px;">Ingresá la contraseña para acceder a los resultados.</p>
+    <div class="field">
+      <input type="password" id="password-input" placeholder="Contraseña">
+    </div>
+    <div class="row" style="justify-content:flex-end;">
+      <button class="secondary" id="btn-cancel-password">Cancelar</button>
+      <button id="btn-confirm-password">Ingresar</button>
+    </div>
+    <p id="password-error" class="muted" style="color:var(--danger);font-size:13px;display:none;margin-top:10px;">Contraseña incorrecta.</p>
+  </div>
+</div>
+
+<!-- ============ MODAL CONFIRMAR BORRADO ============ -->
+<div id="modal-delete" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Borrar todos los datos</h3>
+    <p class="muted" style="font-size:14px;">Esta acción elimina permanentemente todos los registros guardados en este navegador. No se puede deshacer.</p>
+    <div class="row" style="justify-content:flex-end;">
+      <button class="secondary" id="btn-cancel-delete">Cancelar</button>
+      <button class="danger" id="btn-confirm-delete">Borrar todo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PANEL DEL INVESTIGADOR ============ -->
+<div id="screen-panel" class="screen">
+  <div class="card wide">
+    <div class="row between">
+      <h2 style="margin:0;">Panel del investigador</h2>
+      <button class="secondary" id="btn-close-panel">Volver</button>
+    </div>
+
+    <div id="panel-empty" class="empty-note">Todavía no hay datos registrados en este navegador.</div>
+
+    <div id="panel-content" style="display:none;">
+      <div class="section-title">Estadísticas descriptivas</div>
+      <div class="stats-grid" id="stats-grid"></div>
+
+      <div class="section-title">Gráficos</div>
+      <div class="charts">
+        <div>
+          <h3 style="font-size:15px;">Control (negro) vs. Tratamiento (color)</h3>
+          <svg id="chart-comparison" width="100%" height="220" viewBox="0 0 360 220"></svg>
+        </div>
+        <div>
+          <h3 style="font-size:15px;">Recuerdo por color específico</h3>
+          <svg id="chart-color" width="100%" height="220" viewBox="0 0 360 220"></svg>
+        </div>
+      </div>
+
+      <div class="section-title">Datos brutos</div>
+      <div class="table-scroll">
+        <table id="raw-table">
+          <thead>
+            <tr>
+              <th>Nombre / ID</th>
+              <th>Primer set</th>
+              <th>Aciertos Negro</th>
+              <th>Aciertos Color</th>
+              <th>Diferencia (Color - Negro)</th>
+              <th>Omisiones (N+C)</th>
+              <th>Palabras inventadas — Negro</th>
+              <th>Palabras inventadas — Color</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="raw-table-body"></tbody>
+        </table>
+      </div>
+
+      <footer class="panel-actions">
+        <button id="btn-export-csv">Descargar CSV</button>
+        <button class="danger" id="btn-open-delete-modal">Borrar todos los datos</button>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   1. BANCO DE PALABRAS Y CONFIGURACIÓN
+   ============================================================ */
+var WORD_BANK = [
+  "mesa","silla","ventana","puerta","jardin","cocina","espejo","cuchara",
+  "tenedor","plato","botella","sombrero","camisa","zapato","camion","tren",
+  "barco","avion","bosque","playa","desierto","ciudad","pueblo",
+  "calle","plaza","parque","escuela","hospital","mercado","tienda","banco",
+  "iglesia","castillo","puente","torre","panadero","medico","maestro",
+  "alumno","libro","revista","diario","lapiz","cuaderno","mochila","reloj",
+  "telefono","radio","lampara","almohada","manta","cortina","alfombra",
+  "escalera","balcon","ventilador","armario","cajon","florero","maceta",
+  "tijera","peine","cepillo","toalla","jabon","sabana","cortadora"
+];
+var COLORES = ["rojo","azul","verde","naranja","violeta"];
+var EXPOSURE_SECONDS = 15;
+var PANEL_PASSWORD = "investigador123";
+var STORAGE_KEY = "memoriaVisualExperimentos";
+
+/* Pegá acá la URL de tu Google Apps Script (ver instrucciones que te pasé aparte).
+   Si la dejás vacía (""), el experimento sigue funcionando igual, solo que
+   no manda nada a la hoja y los datos quedan únicamente en este dispositivo. */
+var SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbysuNj1jlsFMjuIBmeJCkskhra3_jGoSfR9Eu6c4M2LTHDJk8s5VeXBPEIq5uxOtEWnoA/exec";
+
+/* ============================================================
+   2. UTILIDADES
+   ============================================================ */
+function shuffle(arr){
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function normalize(str){
+  return String(str)
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function showScreen(id){
+  var screens = document.querySelectorAll(".screen");
+  for (var i = 0; i < screens.length; i++){ screens[i].classList.remove("active"); }
+  document.getElementById(id).classList.add("active");
+}
+
+function mean(arr){
+  if (!arr.length) return 0;
+  var s = 0; for (var i=0;i<arr.length;i++) s += arr[i];
+  return s / arr.length;
+}
+function median(arr){
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a,b){return a-b;});
+  var mid = Math.floor(s.length/2);
+  return s.length % 2 ? s[mid] : (s[mid-1]+s[mid])/2;
+}
+function stddev(arr){
+  if (arr.length < 2) return 0;
+  var m = mean(arr);
+  var variance = mean(arr.map(function(x){ return Math.pow(x - m, 2); }));
+  return Math.sqrt(variance);
+}
+function round1(n){ return Math.round(n * 10) / 10; }
+
+/* ============================================================
+   3. ESTADO DEL EXPERIMENTO
+   ============================================================ */
+var state = {
+  participantId: "",
+  order: "A",          // "A" = negro primero, "B" = color primero
+  blocksOrder: [],      // ej. ["negro","color"]
+  blockIndex: 0,
+  sets: { negro: [], color: [] }, // negro: array de strings; color: array de {word,color}
+  displayOrder: { negro: [], color: [] },
+  results: {},
+  timerHandle: null,
+  timerRemaining: EXPOSURE_SECONDS
+};
+
+var lastFinishedRecord = null; // registro del participante que acaba de terminar (para compartir)
+
+function pickWordSets(){
+  var pool = shuffle(WORD_BANK);
+  var negroWords = pool.slice(0, 15);
+  var colorRaw = pool.slice(15, 30);
+  var colorAssign = [];
+  for (var i = 0; i < 15; i++){ colorAssign.push(COLORES[i % 5]); }
+  colorAssign = shuffle(colorAssign);
+  var colorWords = colorRaw.map(function(w, i){ return { word: w, color: colorAssign[i] }; });
+  return { negro: negroWords, color: colorWords };
+}
+
+/* ============================================================
+   4. FLUJO: INICIO
+   ============================================================ */
+document.getElementById("btn-start").addEventListener("click", function(){
+  var idField = document.getElementById("participant-id");
+  var id = idField.value.trim();
+  if (!id){
+    idField.focus();
+    idField.style.borderColor = "var(--danger)";
+    return;
+  }
+  idField.style.borderColor = "var(--rule)";
+
+  state.participantId = id;
+  state.order = Math.random() < 0.5 ? "A" : "B";
+  state.blocksOrder = state.order === "A" ? ["negro","color"] : ["color","negro"];
+  state.blockIndex = 0;
+  state.sets = pickWordSets();
+  state.results = {};
+
+  startExposure(state.blocksOrder[0]);
+});
+
+/* ============================================================
+   5. FASE DE EXPOSICIÓN
+   ============================================================ */
+function startExposure(condition){
+  var grid = document.getElementById("word-grid");
+  grid.innerHTML = "";
+
+  var items;
+  if (condition === "negro"){
+    items = shuffle(state.sets.negro).map(function(w){ return { word: w, color: null }; });
+  } else {
+    items = shuffle(state.sets.color);
+  }
+  state.displayOrder[condition] = items;
+
+  items.forEach(function(item){
+    var div = document.createElement("div");
+    div.className = "word" + (item.color ? " col-" + item.color : "");
+    div.textContent = item.word;
+    grid.appendChild(div);
+  });
+
+  showScreen("screen-exposure");
+
+  state.timerRemaining = EXPOSURE_SECONDS;
+  updateTimerUI();
+  if (state.timerHandle) clearInterval(state.timerHandle);
+  state.timerHandle = setInterval(function(){
+    state.timerRemaining--;
+    updateTimerUI();
+    if (state.timerRemaining <= 0){
+      clearInterval(state.timerHandle);
+      showRecall(condition);
+    }
+  }, 1000);
+}
+
+function updateTimerUI(){
+  var pct = (state.timerRemaining / EXPOSURE_SECONDS) * 100;
+  document.getElementById("timer-fill").style.width = Math.max(pct, 0) + "%";
+  document.getElementById("timer-label").textContent = state.timerRemaining + " s";
+}
+
+/* ============================================================
+   6. FASE DE RECUERDO
+   ============================================================ */
+var currentRecallCondition = null;
+
+function showRecall(condition){
+  currentRecallCondition = condition;
+  document.getElementById("recall-input").value = "";
+  var isLastBlock = (state.blockIndex === state.blocksOrder.length - 1);
+  document.getElementById("btn-submit-recall").textContent =
+    isLastBlock ? "Finalizar experimento" : "Continuar al siguiente bloque";
+  showScreen("screen-recall");
+  document.getElementById("recall-input").focus();
+}
+
+document.getElementById("btn-submit-recall").addEventListener("click", function(){
+  var raw = document.getElementById("recall-input").value;
+  var evaluated = evaluateRecall(raw, currentRecallCondition);
+  state.results[currentRecallCondition] = evaluated;
+
+  var isLastBlock = (state.blockIndex === state.blocksOrder.length - 1);
+  if (!isLastBlock){
+    state.blockIndex++;
+    showScreen("screen-transition");
+  } else {
+    lastFinishedRecord = finalizeParticipant();
+    showFinalScore(lastFinishedRecord);
+    showScreen("screen-final");
+  }
+});
+
+document.getElementById("btn-start-block2").addEventListener("click", function(){
+  startExposure(state.blocksOrder[state.blockIndex]);
+});
+
+/* ============================================================
+   7. ALGORITMO DE EVALUACIÓN
+   ============================================================ */
+function evaluateRecall(rawText, condition){
+  // Separadores equivalentes: coma, punto y coma, guion, espacio o salto de línea,
+  // en cualquier combinación (el sujeto puede usar uno, varios o ninguno de estos signos).
+  var tokens = rawText.split(/[,;\-\s]+/)
+    .map(function(t){ return t.trim(); })
+    .filter(function(t){ return t.length > 0; });
+
+  // Deduplicar respuestas del usuario (por forma normalizada)
+  var seen = {};
+  var userWords = [];
+  tokens.forEach(function(t){
+    var n = normalize(t);
+    if (!seen[n]){ seen[n] = true; userWords.push({ raw: t, norm: n }); }
+  });
+
+  var targetItems = condition === "negro"
+    ? state.sets.negro.map(function(w){ return { word: w, color: null }; })
+    : state.sets.color;
+
+  var targetByNorm = {};
+  targetItems.forEach(function(item){ targetByNorm[normalize(item.word)] = item; });
+
+  var aciertos = [];
+  var intrusiones = [];
+  var recalledNorms = {};
+
+  userWords.forEach(function(uw){
+    if (targetByNorm.hasOwnProperty(uw.norm) && !recalledNorms[uw.norm]){
+      aciertos.push(targetByNorm[uw.norm]);
+      recalledNorms[uw.norm] = true;
+    } else if (!targetByNorm.hasOwnProperty(uw.norm)){
+      intrusiones.push(uw.raw);
+    }
+  });
+
+  var omisiones = targetItems.length - aciertos.length;
+
+  var result = {
+    aciertos: aciertos.length,
+    omisiones: omisiones,
+    intrusiones: intrusiones,
+    listaAciertos: aciertos.map(function(a){ return a.word; })
+  };
+
+  if (condition === "color"){
+    var porColor = {};
+    COLORES.forEach(function(c){ porColor[c] = { presentadas: 0, recordadas: 0 }; });
+    targetItems.forEach(function(item){ porColor[item.color].presentadas++; });
+    aciertos.forEach(function(a){ porColor[a.color].recordadas++; });
+    result.porColor = porColor;
+  }
+
+  return result;
+}
+
+/* ============================================================
+   8. GUARDADO DEL REGISTRO
+   ============================================================ */
+function finalizeParticipant(){
+  var record = {
+    id: state.participantId,
+    timestamp: new Date().toISOString(),
+    orden: state.order === "A" ? "Negro -> Color" : "Color -> Negro",
+    negro: state.results.negro,
+    color: state.results.color
+  };
+  var all = loadAllRecords();
+  all.push(record);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  sendToSheet(record); // intenta centralizar el dato; si falla, no pasa nada, ya quedó guardado localmente
+  return record;
+}
+
+function sendToSheet(record){
+  if (!SHEET_WEBHOOK_URL) return;
+  var primerSet = record.orden === "Negro -> Color" ? "Negro" : "Color";
+  var diff = record.color.aciertos - record.negro.aciertos;
+  var payload = {
+    id: record.id,
+    primerSet: primerSet,
+    aciertosNegro: record.negro.aciertos,
+    aciertosColor: record.color.aciertos,
+    diferencia: diff,
+    omisiones: record.negro.omisiones + record.color.omisiones,
+    intrusionesNegro: record.negro.intrusiones.join(" "),
+    intrusionesColor: record.color.intrusiones.join(" "),
+    fecha: new Date(record.timestamp).toLocaleString()
+  };
+  try {
+    fetch(SHEET_WEBHOOK_URL, {
+      method: "POST",
+      mode: "no-cors", // Apps Script no siempre habilita CORS; esto igual entrega el POST
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita el preflight OPTIONS
+      body: JSON.stringify(payload)
+    }).catch(function(){ /* sin internet o falló: el dato ya quedó en localStorage */ });
+  } catch (e) { /* navegador muy viejo sin fetch: no rompe el experimento */ }
+}
+
+function loadAllRecords(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){
+    return [];
+  }
+}
+
+/* ============================================================
+   8b. RESUMEN DE PORCENTAJE ACERTADO (pantalla final)
+   ============================================================ */
+function showFinalScore(record){
+  var totalNegro = record.negro.aciertos + record.negro.omisiones;
+  var totalColor = record.color.aciertos + record.color.omisiones;
+  var pctNegro = totalNegro ? Math.round(record.negro.aciertos / totalNegro * 100) : 0;
+  var pctColor = totalColor ? Math.round(record.color.aciertos / totalColor * 100) : 0;
+  document.getElementById("final-score").innerHTML =
+    '<p style="margin:4px 0;">Set negro: <strong>' + record.negro.aciertos + '/' + totalNegro + '</strong> (' + pctNegro + '%)</p>' +
+    '<p style="margin:4px 0;">Set color: <strong>' + record.color.aciertos + '/' + totalColor + '</strong> (' + pctColor + '%)</p>';
+}
+
+document.getElementById("btn-restart").addEventListener("click", function(){
+  document.getElementById("participant-id").value = "";
+  lastFinishedRecord = null;
+  showScreen("screen-start");
+});
+
+/* ============================================================
+   9. ACCESO AL PANEL DEL INVESTIGADOR
+   ============================================================ */
+document.getElementById("btn-open-panel-link").addEventListener("click", function(){
+  document.getElementById("password-input").value = "";
+  document.getElementById("password-error").style.display = "none";
+  document.getElementById("modal-password").classList.add("active");
+  setTimeout(function(){ document.getElementById("password-input").focus(); }, 50);
+});
+document.getElementById("btn-cancel-password").addEventListener("click", function(){
+  document.getElementById("modal-password").classList.remove("active");
+});
+document.getElementById("btn-confirm-password").addEventListener("click", attemptPanelAccess);
+document.getElementById("password-input").addEventListener("keydown", function(e){
+  if (e.key === "Enter") attemptPanelAccess();
+});
+function attemptPanelAccess(){
+  var val = document.getElementById("password-input").value;
+  if (val === PANEL_PASSWORD){
+    document.getElementById("modal-password").classList.remove("active");
+    openPanel();
+  } else {
+    document.getElementById("password-error").style.display = "block";
+  }
+}
+document.getElementById("btn-close-panel").addEventListener("click", function(){
+  showScreen("screen-start");
+});
+
+/* ============================================================
+   10. PANEL: RENDERIZADO
+   ============================================================ */
+function openPanel(){
+  showScreen("screen-panel");
+  renderPanel();
+}
+
+function renderPanel(){
+  var data = loadAllRecords();
+  var emptyNote = document.getElementById("panel-empty");
+  var content = document.getElementById("panel-content");
+
+  if (!data.length){
+    emptyNote.style.display = "block";
+    content.style.display = "none";
+    return;
+  }
+  emptyNote.style.display = "none";
+  content.style.display = "block";
+
+  renderStats(data);
+  renderTable(data);
+  renderComparisonChart(data);
+  renderColorChart(data);
+}
+
+function renderStats(data){
+  var negroAciertos = data.map(function(d){ return d.negro.aciertos; });
+  var colorAciertos = data.map(function(d){ return d.color.aciertos; });
+  var totalIntrusiones = data.map(function(d){
+    return (d.negro.intrusiones.length + d.color.intrusiones.length);
+  });
+
+  var boxes = [
+    { n: round1(mean(negroAciertos)), l: "Media aciertos — Control (negro)" },
+    { n: round1(median(negroAciertos)), l: "Mediana aciertos — Control (negro)" },
+    { n: round1(stddev(negroAciertos)), l: "Desvío estándar — Control (negro)" },
+    { n: round1(mean(colorAciertos)), l: "Media aciertos — Tratamiento (color)" },
+    { n: round1(median(colorAciertos)), l: "Mediana aciertos — Tratamiento (color)" },
+    { n: round1(stddev(colorAciertos)), l: "Desvío estándar — Tratamiento (color)" },
+    { n: round1(mean(totalIntrusiones)), l: "Promedio de palabras inventadas (total)" },
+    { n: data.length, l: "Participantes registrados" }
+  ];
+
+  var grid = document.getElementById("stats-grid");
+  grid.innerHTML = "";
+  boxes.forEach(function(b){
+    var div = document.createElement("div");
+    div.className = "stat-box";
+    div.innerHTML = '<div class="n">' + b.n + '</div><div class="l">' + b.l + '</div>';
+    grid.appendChild(div);
+  });
+}
+
+function renderTable(data){
+  var tbody = document.getElementById("raw-table-body");
+  tbody.innerHTML = "";
+  data.forEach(function(d){
+    var diff = d.color.aciertos - d.negro.aciertos;
+    var primerSet = d.orden === "Negro -> Color" ? "Negro" : "Color";
+    var omisionesTotal = d.negro.omisiones + d.color.omisiones;
+    var inventadasNegro = d.negro.intrusiones.length ? d.negro.intrusiones.join(", ") : "—";
+    var inventadasColor = d.color.intrusiones.length ? d.color.intrusiones.join(", ") : "—";
+    var fecha = new Date(d.timestamp).toLocaleString();
+
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + escapeHtml(d.id) + "</td>" +
+      "<td>" + primerSet + "</td>" +
+      "<td>" + d.negro.aciertos + "</td>" +
+      "<td>" + d.color.aciertos + "</td>" +
+      "<td>" + (diff > 0 ? "+" : "") + diff + "</td>" +
+      "<td>" + omisionesTotal + "</td>" +
+      "<td>" + escapeHtml(inventadasNegro) + "</td>" +
+      "<td>" + escapeHtml(inventadasColor) + "</td>" +
+      "<td>" + fecha + "</td>";
+    tbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(s){
+  var div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+/* --- Gráfico de barras SVG: comparación control vs tratamiento --- */
+function renderComparisonChart(data){
+  var svg = document.getElementById("chart-comparison");
+  var meanNegro = mean(data.map(function(d){ return d.negro.aciertos; }));
+  var meanColor = mean(data.map(function(d){ return d.color.aciertos; }));
+  var maxVal = 15;
+  var chartW = 360, chartH = 220;
+  var baseY = 190, topY = 20;
+  var barW = 70;
+  var xs = [90, 220];
+  var vals = [meanNegro, meanColor];
+  var labels = ["Control (negro)", "Tratamiento (color)"];
+  var colors = ["#3c4d6b", "#c9701f"];
+
+  var svgns = "http://www.w3.org/2000/svg";
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", "0 0 " + chartW + " " + chartH);
+
+  // eje base
+  var axis = document.createElementNS(svgns, "line");
+  axis.setAttribute("x1", 40); axis.setAttribute("x2", 340);
+  axis.setAttribute("y1", baseY); axis.setAttribute("y2", baseY);
+  axis.setAttribute("stroke", "#d9dbcd");
+  svg.appendChild(axis);
+
+  for (var i = 0; i < vals.length; i++){
+    var h = (vals[i] / maxVal) * (baseY - topY);
+    var rect = document.createElementNS(svgns, "rect");
+    rect.setAttribute("x", xs[i] - barW/2);
+    rect.setAttribute("y", baseY - h);
+    rect.setAttribute("width", barW);
+    rect.setAttribute("height", h);
+    rect.setAttribute("fill", colors[i]);
+    rect.setAttribute("rx", 2);
+    svg.appendChild(rect);
+
+    var valText = document.createElementNS(svgns, "text");
+    valText.setAttribute("x", xs[i]);
+    valText.setAttribute("y", baseY - h - 8);
+    valText.setAttribute("text-anchor", "middle");
+    valText.setAttribute("font-size", "13");
+    valText.setAttribute("font-family", "Georgia, serif");
+    valText.setAttribute("fill", "#20221c");
+    valText.textContent = round1(vals[i]);
+    svg.appendChild(valText);
+
+    var labText = document.createElementNS(svgns, "text");
+    labText.setAttribute("x", xs[i]);
+    labText.setAttribute("y", baseY + 20);
+    labText.setAttribute("text-anchor", "middle");
+    labText.setAttribute("font-size", "11");
+    labText.setAttribute("fill", "#686b5f");
+    labText.textContent = labels[i];
+    svg.appendChild(labText);
+  }
+}
+
+/* --- Gráfico de barras SVG: recuerdo por color --- */
+function renderColorChart(data){
+  var svg = document.getElementById("chart-color");
+  var svgns = "http://www.w3.org/2000/svg";
+  svg.innerHTML = "";
+  var chartW = 360, chartH = 220;
+  svg.setAttribute("viewBox", "0 0 " + chartW + " " + chartH);
+
+  var totals = {};
+  COLORES.forEach(function(c){ totals[c] = { presentadas: 0, recordadas: 0 }; });
+  data.forEach(function(d){
+    COLORES.forEach(function(c){
+      totals[c].presentadas += d.color.porColor[c].presentadas;
+      totals[c].recordadas += d.color.porColor[c].recordadas;
+    });
+  });
+
+  var pct = COLORES.map(function(c){
+    var t = totals[c];
+    return t.presentadas > 0 ? (t.recordadas / t.presentadas) * 100 : 0;
+  });
+
+  var colorHex = { rojo:"#c0392b", azul:"#1f5fbf", verde:"#1f7a4d", naranja:"#c9701f", violeta:"#7b4b94" };
+  var baseY = 190, topY = 20;
+  var n = COLORES.length;
+  var barW = 34;
+  var gap = (chartW - 60) / n;
+
+  var axis = document.createElementNS(svgns, "line");
+  axis.setAttribute("x1", 30); axis.setAttribute("x2", 340);
+  axis.setAttribute("y1", baseY); axis.setAttribute("y2", baseY);
+  axis.setAttribute("stroke", "#d9dbcd");
+  svg.appendChild(axis);
+
+  COLORES.forEach(function(c, i){
+    var x = 45 + i * gap + gap/2;
+    var h = (pct[i] / 100) * (baseY - topY);
+    var rect = document.createElementNS(svgns, "rect");
+    rect.setAttribute("x", x - barW/2);
+    rect.setAttribute("y", baseY - h);
+    rect.setAttribute("width", barW);
+    rect.setAttribute("height", h);
+    rect.setAttribute("fill", colorHex[c]);
+    rect.setAttribute("rx", 2);
+    svg.appendChild(rect);
+
+    var valText = document.createElementNS(svgns, "text");
+    valText.setAttribute("x", x);
+    valText.setAttribute("y", baseY - h - 6);
+    valText.setAttribute("text-anchor", "middle");
+    valText.setAttribute("font-size", "11");
+    valText.setAttribute("fill", "#20221c");
+    valText.textContent = round1(pct[i]) + "%";
+    svg.appendChild(valText);
+
+    var labText = document.createElementNS(svgns, "text");
+    labText.setAttribute("x", x);
+    labText.setAttribute("y", baseY + 18);
+    labText.setAttribute("text-anchor", "middle");
+    labText.setAttribute("font-size", "10");
+    labText.setAttribute("fill", "#686b5f");
+    labText.textContent = c;
+    svg.appendChild(labText);
+  });
+}
+
+/* ============================================================
+   11. EXPORTAR CSV
+   ============================================================ */
+document.getElementById("btn-export-csv").addEventListener("click", function(){
+  var data = loadAllRecords();
+  if (!data.length) return;
+
+  var header = [
+    "Nombre/ID","Primer set presentado","Aciertos Negro","Aciertos Color",
+    "Diferencia (Color - Negro)","Omisiones Negro","Omisiones Color",
+    "Palabras inventadas Negro (detalle)","Palabras inventadas Color (detalle)","Fecha"
+  ];
+  var rows = data.map(function(d){
+    var primerSet = d.orden === "Negro -> Color" ? "Negro" : "Color";
+    var diff = d.color.aciertos - d.negro.aciertos;
+    return [
+      d.id, primerSet, d.negro.aciertos, d.color.aciertos, diff,
+      d.negro.omisiones, d.color.omisiones,
+      d.negro.intrusiones.join(", "), d.color.intrusiones.join(", "),
+      new Date(d.timestamp).toLocaleString()
+    ];
+  });
+
+  var csvLines = [header].concat(rows).map(function(r){
+    return r.map(function(cell){
+      var s = String(cell).replace(/"/g, '""');
+      return /[",\n]/.test(s) ? '"' + s + '"' : s;
+    }).join(",");
+  });
+  var csvContent = csvLines.join("\n");
+
+  var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "resultados_memoria_visual.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+/* ============================================================
+   12. BORRAR DATOS
+   ============================================================ */
+document.getElementById("btn-open-delete-modal").addEventListener("click", function(){
+  document.getElementById("modal-delete").classList.add("active");
+});
+document.getElementById("btn-cancel-delete").addEventListener("click", function(){
+  document.getElementById("modal-delete").classList.remove("active");
+});
+document.getElementById("btn-confirm-delete").addEventListener("click", function(){
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById("modal-delete").classList.remove("active");
+  renderPanel();
+});
+
+})();
+</script>
+</body>
+</html>
